@@ -4,11 +4,11 @@ module Main
     where
 --------------------------------------------------------------------------------
 import Control.Monad               (forM_)
-import Control.Monad.State.Strict  (evalState)
+import Control.Monad.State         (evalState)
 import Data.Map.Strict             (Map)
 import Data.Text                   (Text)
 import Options.Applicative
-import Model                       (Node)
+import Model                       (Graph(..), Node)
 import Parser                      (parseGraph)
 import SIR                         (spreadingPower, epidemicThreshold)
 import Text.Megaparsec             (errorBundlePretty, parse)
@@ -53,12 +53,14 @@ go Options{..} = do
 
     case mgraph of
         Left bundle -> putStr (errorBundlePretty bundle)
-        Right graph -> do
+        Right graph@Graph{..} -> do
             let gen = mkStdGen seed
                 lam = epidemicThreshold graph
-                s   = evalState (spreadingPower iterations graph lam) gen
-                t   = toText s
-            T.writeFile outputFile t
+                --s   = evalState (spreadingPower iterations graph lam) gen
+                nodes = M.keys neighbours
+                computations = sequence [ spreadingPower graph u iterations lam | u <- nodes ]
+                s = M.fromList . zip nodes . evalState computations $ gen
+            T.writeFile outputFile (toText s)
 
 
 main :: IO ()
