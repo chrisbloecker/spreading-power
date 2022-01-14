@@ -67,17 +67,19 @@ spreadingPower g u n infectionProbability = do
 
 sir :: Graph -> Node -> Double -> State StdGen Int
 sir Graph{..} u infectionProbability =
-    let s = u `S.delete` M.keysSet neighbours
-        i = S.singleton u
-        r = S.empty
-    in go s i r
+    if u `M.member` neighbours
+        then let s = u `S.delete` M.keysSet neighbours
+                 i = S.singleton u
+                 r = S.empty
+             in go s i r
+        else return 0
 
     where
         go :: Set Node -> Set Node -> Set Node -> State StdGen Int
         go !s !i !r | S.null i  = return (S.size r)
                     | otherwise = do
                         let infectable = concat 
-                                       . S.map (S.toList . S.filter (`S.member` s) . (neighbours M.!))
+                                       . S.map (S.toList . S.filter (`S.member` s) . (neighbours M.!))  
                                        $ i
                         i' <- S.fromList <$> filterM infect infectable
                         let r' = r `S.union` i

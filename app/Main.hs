@@ -8,7 +8,7 @@ import Control.Monad.State         (evalState)
 import Data.Map.Strict             (Map)
 import Data.Text                   (Text)
 import Options.Applicative
-import Model                       (Graph(..), Node)
+import Model                       (Graph(..), Node, nodes)
 import Parser                      (parseGraph)
 import SIR                         (spreadingPower, epidemicThreshold)
 import Text.Megaparsec             (errorBundlePretty, parse)
@@ -41,10 +41,10 @@ options = Options <$> inputFile
 
 --------------------------------------------------------------------------------
 
-toText :: Map Node Double -> Text
-toText m = T.unlines [ T.unwords [T.pack node, T.pack (show spreadingPower)]
-                     | (node, spreadingPower) <- M.assocs m
-                     ]
+toText :: [(Node, Double)] -> Text
+toText sp = T.unlines [ T.unwords [T.pack node, T.pack (show spreadingPower)]
+                      | (node, spreadingPower) <- sp
+                      ]
 
 
 go :: Options -> IO ()
@@ -56,10 +56,9 @@ go Options{..} = do
         Right graph@Graph{..} -> do
             let gen = mkStdGen seed
                 lam = epidemicThreshold graph
-                --s   = evalState (spreadingPower iterations graph lam) gen
-                nodes = M.keys neighbours
-                computations = sequence [ spreadingPower graph u iterations lam | u <- nodes ]
-                s = M.fromList . zip nodes . evalState computations $ gen
+                us  = nodes graph
+                computations = sequence [ spreadingPower graph u iterations lam | u <- us ]
+                s = zip us . evalState computations $ gen
             T.writeFile outputFile (toText s)
 
 
